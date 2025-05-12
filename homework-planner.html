@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homework Planner</title>
+  <style>
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #333;
+      --task-bg: #fff;
+      --button-bg: #007bff;
+      --button-text: #fff;
+      --delete-bg: #ff4d4d;
+      --yet-to-start-bg: #d6d8db;
+      --in-progress-bg: #fff3cd;
+      --completed-bg: #d1e7dd;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+    }
+    h1 {
+      color: var(--text-color);
+    }
+    input, button, select {
+      margin: 5px;
+      padding: 8px;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    button.delete {
+      background-color: var(--delete-bg);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .color-settings {
+      margin-top: 20px;
+    }
+
+    .settings-container {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .task-type-color {
+      display: inline-block;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Homework Planner</h1>
+  <input id="taskName" placeholder="Enter task">
+  <input id="dueDate" type="date">
+  <input id="dueTime" type="time" placeholder="Optional time">
+  
+  <input id="customSubject" placeholder="Custom Subject (e.g. Math, Science)">
+  <input id="customSubjectColor" type="color">
+  
+  <button onclick="addTask()">Add Task</button>
+  <button onclick="toggleSettings()">Customization Settings</button>
+
+  <table id="taskList">
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Due Date</th>
+        <th>Due Time</th>
+        <th>Subject</th>
+        <th>Days Remaining</th>
+        <th>Progress</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Tasks will be inserted here -->
+    </tbody>
+  </table>
+
+  <div class="settings-container">
+    <h3>Customize Colors</h3>
+    <label>Background: <input type="color" onchange="setColor('--bg-color', this.value)"></label>
+    <label>Text: <input type="color" onchange="setColor('--text-color', this.value)"></label>
+    <label>Task Background: <input type="color" onchange="setColor('--task-bg', this.value)"></label>
+    <label>Button Background: <input type="color" onchange="setColor('--button-bg', this.value)"></label>
+    <label>Delete Button: <input type="color" onchange="setColor('--delete-bg', this.value)"></label>
+  </div>
+
+  <script>
+    const taskList = [];
+
+    const progressColors = {
+      "yet-to-start": 'var(--yet-to-start-bg)',
+      "in-progress": 'var(--in-progress-bg)',
+      "completed": 'var(--completed-bg)'
+    };
+
+    function addTask() {
+      const taskName = document.getElementById("taskName").value.trim();
+      const dueDate = document.getElementById("dueDate").value;
+      const dueTime = document.getElementById("dueTime").value;
+      const customSubject = document.getElementById("customSubject").value.trim();
+      const customSubjectColor = document.getElementById("customSubjectColor").value;
+
+      if (!taskName || !dueDate || !customSubject || !customSubjectColor) {
+        alert("Please enter all fields: task name, due date, subject, and subject color.");
+        return;
+      }
+
+      const task = {
+        name: taskName,
+        due: dueDate,
+        time: dueTime,
+        subject: customSubject,
+        subjectColor: customSubjectColor,
+        progress: "yet-to-start",
+        id: Date.now(),
+      };
+
+      taskList.push(task);
+      renderTasks();
+
+      document.getElementById("taskName").value = "";
+      document.getElementById("dueDate").value = "";
+      document.getElementById("dueTime").value = "";
+      document.getElementById("customSubject").value = "";
+      document.getElementById("customSubjectColor").value = "#000000";
+    }
+
+    function deleteTask(id) {
+      const index = taskList.findIndex(task => task.id === id);
+      if (index !== -1) {
+        taskList.splice(index, 1);
+        renderTasks();
+      }
+    }
+
+    function getDaysRemaining(dueDateStr) {
+      const dueDate = new Date(dueDateStr);
+      const today = new Date();
+      dueDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffTime = dueDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+
+    function updateProgress(id, progress) {
+      const task = taskList.find(task => task.id === id);
+      if (task) {
+        task.progress = progress;
+        renderTasks();
+      }
+    }
+
+    function renderTasks() {
+      const tbody = document.querySelector("#taskList tbody");
+      tbody.innerHTML = "";
+
+      // Sort tasks by due date
+      taskList.sort((a, b) => new Date(a.due) - new Date(b.due));
+
+      taskList.forEach(task => {
+        const row = document.createElement("tr");
+        
+        const daysRemaining = getDaysRemaining(task.due);
+        const timePart = task.time ? ` at ${task.time}` : "";
+        const daysText = daysRemaining >= 0 ? `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left` : "Past due";
+
+        const progressSelect = `
+          <select onchange="updateProgress(${task.id}, this.value)">
+            <option value="yet-to-start" ${task.progress === "yet-to-start" ? 'selected' : ''}>Yet to Start</option>
+            <option value="in-progress" ${task.progress === "in-progress" ? 'selected' : ''}>In Progress</option>
+            <option value="completed" ${task.progress === "completed" ? 'selected' : ''}>Completed</option>
+          </select>
+        `;
+
+        row.innerHTML = `
+          <td>${task.name}</td>
+          <td>${task.due}</td>
+          <td>${task.time || 'N/A'}</td>
+          <td><span class="task-type-color" style="background-color: ${task.subjectColor};"></span> ${task.subject}</td>
+          <td>${daysText}</td>
+          <td style="background-color: ${progressColors[task.progress]};">${progressSelect}</td>
+          <td><button class="delete" onclick="deleteTask(${task.id})">Delete</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Save tasks to localStorage
+      localStorage.setItem("tasks", JSON.stringify(taskList));
+    }
+
+    function setColor(variable, value) {
+      document.documentElement.style.setProperty(variable, value);
+    }
+
+    function toggleSettings() {
+      const settings = document.querySelector('.settings-container');
+      settings.style.display = settings.style.display === 'block' ? 'none' : 'block';
+    }
+
+    window.onload = function() {
+      const savedTasks = localStorage.getItem("tasks");
+      if (savedTasks) {
+        taskList.push(...JSON.parse(savedTasks));
+        renderTasks();
+      }
+    };
+
+    window.onbeforeunload = function() {
+      localStorage.setItem("tasks", JSON.stringify(taskList));
+    };
+  </script>
+</body>
+</html>
